@@ -53,7 +53,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     Toast.makeText(MainActivity.this, dsx.getStandardDeviation() + "\n" +
                             dsy.getStandardDeviation() + "\n" +
                             dsz.getStandardDeviation(), Toast.LENGTH_LONG).show();
-                    dsx.clear();dsy.clear();dsz.clear();
+                    dsx.clear();
+                    dsy.clear();
+                    dsz.clear();
                 }
             });
         }
@@ -81,13 +83,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         scheduleTaskExecutor.scheduleAtFixedRate(intervalRunnable, TIME_WINDOW, TIME_INTERVAL, TimeUnit.SECONDS);
     }
 
-
     @Override
     public void onResume() {
         super.onResume();
         mSensorManager.registerListener(this, mAcceleromaterSensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
-
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -111,7 +111,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         this.mY.setText(decimalFormat.format(linear_acceleration[1]));
         this.mZ.setText(decimalFormat.format(linear_acceleration[2]));
 
-
         DataPoint dataPoint = new DataPoint(Math.round(linear_acceleration[0]),
                 Math.round(linear_acceleration[1]), Math.round(linear_acceleration[2]));
 
@@ -126,17 +125,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         scheduleTaskExecutor.shutdown();
         mSensorManager.unregisterListener(this);
     }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
-
-    }
-
 
 
 }
