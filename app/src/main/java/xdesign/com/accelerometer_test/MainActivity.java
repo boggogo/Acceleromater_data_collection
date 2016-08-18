@@ -88,11 +88,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mSensorManager.registerListener(this, mAcceleromaterSensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mSensorManager.unregisterListener(this);
-    }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -136,6 +131,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onDestroy() {
         super.onDestroy();
         scheduleTaskExecutor.shutdown();
+        mSensorManager.unregisterListener(this);
     }
 
     @Override
