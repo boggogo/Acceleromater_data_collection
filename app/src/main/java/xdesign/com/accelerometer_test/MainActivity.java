@@ -12,6 +12,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
@@ -40,6 +42,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private ArrayAdapter<DataPoint> adapter;
     private ArrayList<DataPoint> dataPoints = new ArrayList<>();
     private ScheduledExecutorService scheduleTaskExecutor = Executors.newScheduledThreadPool(5);
+    private DescriptiveStatistics dsx = new DescriptiveStatistics();
+    private DescriptiveStatistics dsy = new DescriptiveStatistics();
+    private DescriptiveStatistics dsz = new DescriptiveStatistics();
+    private Runnable intervalRunnable = new Runnable() {
+        public void run() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(MainActivity.this, dsx.getStandardDeviation() + "\n" +
+                            dsy.getStandardDeviation() + "\n" +
+                            dsz.getStandardDeviation(), Toast.LENGTH_LONG).show();
+                    dsx.clear();dsy.clear();dsz.clear();
+                }
+            });
+        }
+    };
+
+    private int TIME_WINDOW = 2;
+    private int TIME_INTERVAL = 10;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,16 +78,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
         // This schedule a runnable task every 2 minutes
-        scheduleTaskExecutor.scheduleAtFixedRate(new Runnable() {
-            public void run() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, "StandardDiviation For the past 5 seconds is: X", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-        }, 0, 5, TimeUnit.SECONDS);
+        scheduleTaskExecutor.scheduleAtFixedRate(intervalRunnable, TIME_WINDOW, TIME_INTERVAL, TimeUnit.SECONDS);
     }
 
 
@@ -111,8 +124,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 Math.round(calculateTotalAcceleration(linear_acceleration[0],
                         linear_acceleration[1], linear_acceleration[2])));
 
+        dsx.addValue(dataPoint.getX());
+        dsy.addValue(dataPoint.getY());
+        dsz.addValue(dataPoint.getZ());
+
         dataPoints.add(dataPoint);
         adapter.notifyDataSetChanged();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        scheduleTaskExecutor.shutdown();
     }
 
     @Override
