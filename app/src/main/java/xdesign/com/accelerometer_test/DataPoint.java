@@ -9,7 +9,8 @@ public class DataPoint {
     private double z;
     private double totalA;
 
-    public DataPoint(double x, double y, double z, double totalA) {
+
+    public DataPoint(double x, double y, double z) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -41,12 +42,9 @@ public class DataPoint {
     }
 
     public double getTotalA() {
-        return totalA;
+        return Math.sqrt(x * x + y * y + z * z);
     }
 
-    public void setTotalA(double totalA) {
-        this.totalA = totalA;
-    }
 
     @Override
     public String toString() {

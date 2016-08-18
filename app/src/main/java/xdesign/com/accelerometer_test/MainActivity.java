@@ -110,14 +110,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         this.mX.setText(decimalFormat.format(linear_acceleration[0]));
         this.mY.setText(decimalFormat.format(linear_acceleration[1]));
         this.mZ.setText(decimalFormat.format(linear_acceleration[2]));
-        this.mTotalAcc.setText(decimalFormat.format(
-                calculateTotalAcceleration(linear_acceleration[0], linear_acceleration[1],
-                        linear_acceleration[2])));
+
 
         DataPoint dataPoint = new DataPoint(Math.round(linear_acceleration[0]),
-                Math.round(linear_acceleration[1]), Math.round(linear_acceleration[2]),
-                Math.round(calculateTotalAcceleration(linear_acceleration[0],
-                        linear_acceleration[1], linear_acceleration[2])));
+                Math.round(linear_acceleration[1]), Math.round(linear_acceleration[2]));
+
+        mTotalAcc.setText(decimalFormat.format(dataPoint.getTotalA()));
 
         dsx.addValue(dataPoint.getX());
         dsy.addValue(dataPoint.getY());
@@ -140,7 +138,5 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 
-    public double calculateTotalAcceleration(double x, float y, float z) {
-        return Math.sqrt(x * x + y * y + z * z);
-    }
+
 }
