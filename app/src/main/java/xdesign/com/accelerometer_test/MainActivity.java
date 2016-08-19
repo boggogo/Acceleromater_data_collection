@@ -1,12 +1,17 @@
 package xdesign.com.accelerometer_test;
 
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -14,6 +19,10 @@ import android.widget.Toast;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
@@ -22,8 +31,13 @@ import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import weka.core.Attribute;
+import weka.core.DenseInstance;
+import weka.core.Instances;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
+    private static final String TAG = MainActivity.class.getSimpleName();
+    public static String KEY_DATA_POINTS = "data_points";
     @BindView(R.id.x_value)
     TextView mX;
     @BindView(R.id.y_value)
@@ -34,6 +48,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     TextView mTotalAcc;
     @BindView(R.id.listView)
     ListView mList;
+    private int fileCounter = 0;
     private SensorManager mSensorManager;
     private Sensor mAcceleromaterSensor;
     private float[] gravity = new float[3];
@@ -53,11 +68,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     Toast.makeText(MainActivity.this, dsx.getStandardDeviation() + "\n" +
                             dsy.getStandardDeviation() + "\n" +
                             dsz.getStandardDeviation(), Toast.LENGTH_LONG).show();
+                    try {
+                        saveCurrentDataToArffFile(dataPoints);
+                        Log.d(TAG, "DATA SAVED TO A ARFF file");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    dataPoints.clear();
+                    adapter.notifyDataSetChanged();
                     dsx.clear();
                     dsy.clear();
                     dsz.clear();
                 }
             });
+
         }
     };
 
@@ -112,7 +136,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         this.mZ.setText(decimalFormat.format(linear_acceleration[2]));
 
         DataPoint dataPoint = new DataPoint(Math.round(linear_acceleration[0]),
-                Math.round(linear_acceleration[1]), Math.round(linear_acceleration[2]));
+                Math.round(linear_acceleration[1]), Math.round(linear_acceleration[2]),
+                System.currentTimeMillis());
 
         mTotalAcc.setText(decimalFormat.format(dataPoint.getTotalA()));
 
@@ -134,6 +159,64 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onDestroy();
         scheduleTaskExecutor.shutdown();
         mSensorManager.unregisterListener(this);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    //Handle tool bar menu item clicks...
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_show_graph) {
+            Intent intent = new Intent(MainActivity.this, GraphActivity.class);
+            intent.putExtra(KEY_DATA_POINTS, dataPoints);
+            startActivity(intent);
+            return true;
+        }
+
+        if (id == R.id.action_delete_current_data) {
+            this.dataPoints.clear();
+            adapter.notifyDataSetChanged();
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+
+    public void saveCurrentDataToArffFile(ArrayList<DataPoint> dataPoints) throws IOException {
+        ArrayList<Attribute> attributes = new ArrayList<>(dataPoints.size());
+        attributes.add(new Attribute("X"));
+        attributes.add(new Attribute("Y"));
+        attributes.add(new Attribute("Z"));
+//        for (DataPoint dp : dataPoints) {
+//            attributes.add(new Attribute("x"));
+//            attributes.add(new Attribute("StandardDeviation y"));
+//            attributes.add(new Attribute("StandardDeviation z"));
+//        }
+
+        Instances dataSet = new Instances("ActivityRecognition", attributes, dataPoints.size());
+        for (DataPoint dp : dataPoints) {
+            dataSet.add(new DenseInstance(1.0, dp.getXYZ()));
+        }
+
+        File path = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS);
+        File file = new File(path, "/" + "activity_recognition" + fileCounter++ + ".arff");
+
+        BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+        writer.write(dataSet.toString());
+        writer.flush();
+        writer.close();
     }
 
 

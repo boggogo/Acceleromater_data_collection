@@ -1,20 +1,22 @@
 package xdesign.com.accelerometer_test;
 
+import java.io.Serializable;
+
 /**
  * @author Georgi Koemdzhiev created on 18/08/16.
  */
-public class DataPoint {
+public class DataPoint implements Serializable {
     private double x;
     private double y;
     private double z;
-    private double totalA;
+    private long timeStamp;
 
 
-    public DataPoint(double x, double y, double z) {
+    public DataPoint(double x, double y, double z, long timeStamp) {
         this.x = x;
         this.y = y;
         this.z = z;
-        this.totalA = totalA;
+        this.timeStamp = timeStamp;
     }
 
     public double getX() {
@@ -41,16 +43,30 @@ public class DataPoint {
         this.z = z;
     }
 
+
+    public long getTimeStamp() {
+        return timeStamp;
+    }
+
+    public void setTimeStamp(long timeStamp) {
+        this.timeStamp = timeStamp;
+    }
+
     public double getTotalA() {
         return Math.sqrt(x * x + y * y + z * z);
     }
 
+    public double[] getXYZ() {
+        return new double[]{
+                x,
+                y,
+                z
+        };
+    }
 
     @Override
     public String toString() {
-        return "x=" + x +
-                "y=" + y +
-                "z=" + z +
-                "totA=" + totalA;
+        return x + "," + y + "," + z + "," + getTimeStamp();
     }
+
 }
