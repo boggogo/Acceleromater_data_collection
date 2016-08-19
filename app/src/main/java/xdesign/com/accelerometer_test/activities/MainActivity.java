@@ -1,4 +1,4 @@
-package xdesign.com.accelerometer_test;
+package xdesign.com.accelerometer_test.activities;
 
 import android.content.Context;
 import android.content.Intent;
@@ -15,9 +15,6 @@ import android.view.MenuItem;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -34,6 +31,11 @@ import butterknife.ButterKnife;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instances;
+import xdesign.com.accelerometer_test.R;
+import xdesign.com.accelerometer_test.data.DataPoint;
+import xdesign.com.accelerometer_test.data.DataPointManager;
+import xdesign.com.accelerometer_test.utils.Constants;
+import xdesign.com.accelerometer_test.utils.DataPointUtils;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -48,45 +50,41 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     TextView mTotalAcc;
     @BindView(R.id.listView)
     ListView mList;
-    private int fileCounter = 0;
+
     private SensorManager mSensorManager;
     private Sensor mAcceleromaterSensor;
     private float[] gravity = new float[3];
     private float[] linear_acceleration = new float[3];
     private DecimalFormat decimalFormat;
     private ArrayAdapter<DataPoint> adapter;
-    private ArrayList<DataPoint> dataPoints = new ArrayList<>();
+    private DataPointManager dataPointManager;
     private ScheduledExecutorService scheduleTaskExecutor = Executors.newScheduledThreadPool(5);
-    private DescriptiveStatistics dsx = new DescriptiveStatistics();
-    private DescriptiveStatistics dsy = new DescriptiveStatistics();
-    private DescriptiveStatistics dsz = new DescriptiveStatistics();
-    private Runnable intervalRunnable = new Runnable() {
+    private Instances dataSet;
+    private Runnable generateFeatureRunnable = new Runnable() {
+        public void run() {
+            Log.d(TAG, "New Feature Generated...");
+            dataSet.add(new DenseInstance(1.0, dataPointManager.getDSXYZ_ActivityType()));
+        }
+    };
+    private Runnable saveListOfFeaturesRunnable = new Runnable() {
         public void run() {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    Toast.makeText(MainActivity.this, dsx.getStandardDeviation() + "\n" +
-                            dsy.getStandardDeviation() + "\n" +
-                            dsz.getStandardDeviation(), Toast.LENGTH_LONG).show();
                     try {
-                        saveCurrentDataToArffFile(dataPoints);
-                        Log.d(TAG, "DATA SAVED TO A ARFF file");
+                        DataPointUtils.saveCurrentDataToArffFile(dataSet);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    dataPoints.clear();
+                    dataPointManager.clear();
+                    dataSet.clear();
                     adapter.notifyDataSetChanged();
-                    dsx.clear();
-                    dsy.clear();
-                    dsz.clear();
+
                 }
             });
 
         }
     };
-
-    private int TIME_WINDOW = 2;
-    private int TIME_INTERVAL = 10;
 
 
     @Override
@@ -94,17 +92,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+
+        // Set the activity type here
+        dataPointManager = new DataPointManager(0);
+
+        dataSet = new Instances("ActivityRecognition", DataPointUtils.constructAttributeNames(),
+                Constants.INITIAL_DATA_SET_VALUE);
+
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mAcceleromaterSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mSensorManager.registerListener(this, mAcceleromaterSensor, SensorManager.SENSOR_DELAY_NORMAL);
         decimalFormat = new DecimalFormat("0.000");
 
-        adapter = new ArrayAdapter<DataPoint>(this, android.R.layout.simple_list_item_1, dataPoints);
+        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, dataPointManager.getDataPoints());
         mList.setAdapter(adapter);
 
 
-        // This schedule a runnable task every 2 minutes
-        scheduleTaskExecutor.scheduleAtFixedRate(intervalRunnable, TIME_WINDOW, TIME_INTERVAL, TimeUnit.SECONDS);
+        scheduleTaskExecutor.scheduleAtFixedRate(generateFeatureRunnable,
+                Constants.TIME_WINDOW, Constants.TIME_INTERVAL_GEN_FEATURE, TimeUnit.MILLISECONDS);
+
+        scheduleTaskExecutor.scheduleAtFixedRate(saveListOfFeaturesRunnable,
+                Constants.TIME_WINDOW, Constants.TIME_INTERVAL_SAVE_FILE, TimeUnit.SECONDS);
     }
 
     @Override
@@ -141,11 +149,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         mTotalAcc.setText(decimalFormat.format(dataPoint.getTotalA()));
 
-        dsx.addValue(dataPoint.getX());
-        dsy.addValue(dataPoint.getY());
-        dsz.addValue(dataPoint.getZ());
+        dataPointManager.addDSX(dataPoint.getX());
+        dataPointManager.addDSY(dataPoint.getY());
+        dataPointManager.addDSZ(dataPoint.getZ());
 
-        dataPoints.add(dataPoint);
+        dataPointManager.add(dataPoint);
         adapter.notifyDataSetChanged();
     }
 
@@ -179,44 +187,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_show_graph) {
             Intent intent = new Intent(MainActivity.this, GraphActivity.class);
-            intent.putExtra(KEY_DATA_POINTS, dataPoints);
+            intent.putExtra(KEY_DATA_POINTS, dataPointManager.getDataPoints());
             startActivity(intent);
             return true;
         }
 
         if (id == R.id.action_delete_current_data) {
-            this.dataPoints.clear();
+            this.dataPointManager.clear();
             adapter.notifyDataSetChanged();
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-
-    public void saveCurrentDataToArffFile(ArrayList<DataPoint> dataPoints) throws IOException {
-        ArrayList<Attribute> attributes = new ArrayList<>(dataPoints.size());
-        attributes.add(new Attribute("X"));
-        attributes.add(new Attribute("Y"));
-        attributes.add(new Attribute("Z"));
-//        for (DataPoint dp : dataPoints) {
-//            attributes.add(new Attribute("x"));
-//            attributes.add(new Attribute("StandardDeviation y"));
-//            attributes.add(new Attribute("StandardDeviation z"));
-//        }
-
-        Instances dataSet = new Instances("ActivityRecognition", attributes, dataPoints.size());
-        for (DataPoint dp : dataPoints) {
-            dataSet.add(new DenseInstance(1.0, dp.getXYZ()));
-        }
-
-        File path = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOCUMENTS);
-        File file = new File(path, "/" + "activity_recognition" + fileCounter++ + ".arff");
-
-        BufferedWriter writer = new BufferedWriter(new FileWriter(file));
-        writer.write(dataSet.toString());
-        writer.flush();
-        writer.close();
     }
 
 

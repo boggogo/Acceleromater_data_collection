@@ -1,4 +1,4 @@
-package xdesign.com.accelerometer_test;
+package xdesign.com.accelerometer_test.activities;
 
 import android.graphics.Color;
 import android.os.Bundle;
@@ -9,12 +9,13 @@ import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import lecho.lib.hellocharts.model.Axis;
 import lecho.lib.hellocharts.model.AxisValue;
 import lecho.lib.hellocharts.model.Line;
 import lecho.lib.hellocharts.model.LineChartData;
 import lecho.lib.hellocharts.model.PointValue;
 import lecho.lib.hellocharts.view.LineChartView;
+import xdesign.com.accelerometer_test.R;
+import xdesign.com.accelerometer_test.data.DataPoint;
 
 public class GraphActivity extends AppCompatActivity {
     @BindView(R.id.chartView)

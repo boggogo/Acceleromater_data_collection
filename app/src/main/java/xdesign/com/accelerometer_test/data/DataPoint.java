@@ -1,4 +1,4 @@
-package xdesign.com.accelerometer_test;
+package xdesign.com.accelerometer_test.data;
 
 import java.io.Serializable;
 

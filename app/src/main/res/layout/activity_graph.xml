@@ -7,7 +7,7 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="xdesign.com.accelerometer_test.GraphActivity">
+    tools:context=".activities.GraphActivity">
 
     <lecho.lib.hellocharts.view.LineChartView
         android:id="@+id/chartView"
